@@ -20,6 +20,8 @@ namespace Fetcher
             var configPath = ConfigurationManager.AppSettings["configPath"];
             var config = ReadConfig(configPath);
             string masterHash;
+
+            // Get last updated commit hash
             try
             {
                 masterHash = Bash($"git ls-remote {repoSite}/{config.Repo}.git HEAD");
@@ -36,8 +38,9 @@ namespace Fetcher
             // Get repo as zip
             var contents = GetRequestByteArray($"{repoSite}/{config.Repo}/archive/master.zip").Result;
             File.WriteAllBytes(config.RepoPath, contents);
+            log.Info("Downloaded repo as zip");
 
-            // Get rpm packages and zip them together
+            // Get rpm packages to folder
             foreach (var rpm in config.Rpms)
             {
                 try
@@ -50,14 +53,18 @@ namespace Fetcher
                     return;
                 }
             }
+            // Zip all rpms 
             ZipFile.CreateFromDirectory(config.RpmsFolder, config.RpmsZipPath);
-            
-            // Zip all binaries to one zip (includes repo.zip + rpms.zip)
+            log.Info("Zipped rpms");
+
+            // Zip all binaries (includes repo.zip + rpms.zip)
             ZipFile.CreateFromDirectory(config.BinariesPath, config.BinariesZipPath);
-            
+            log.Info("Zipped binaries");
+
             // Update configuration
             config.LastHash = masterHash;
             UpdateConfig(configPath, config);
+            log.Info("Commit hash updated in configuration");
         }
 
         private static Configuraion ReadConfig(string configPath)
