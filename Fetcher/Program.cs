@@ -5,42 +5,55 @@ using System.Threading.Tasks;
 using System.Configuration;
 using Nett;
 using System.IO;
+using log4net;
+using System;
 
 namespace Fetcher
 {
     public class Program
     {
+        private static readonly ILog log = LogManager.GetLogger(typeof(Program));
+
         public static void Main()
         {
+            const string repoSite = "https://github.com";
             var configPath = ConfigurationManager.AppSettings["configPath"];
-            var repoPath = ConfigurationManager.AppSettings["repoPath"];
-            var rpmsFolder = ConfigurationManager.AppSettings["rpmsFolder"];
-            var rpmsZipPath = ConfigurationManager.AppSettings["rpmsZipPath"];
-            var binariesPath = ConfigurationManager.AppSettings["binariesPath"];
-            var binariesZipPath = ConfigurationManager.AppSettings["binariesZipPath"];
             var config = ReadConfig(configPath);
-            var masterHash = Bash($"git ls-remote https://github.com/{config.Repo}.git HEAD");
+            string masterHash;
+            try
+            {
+                masterHash = Bash($"git ls-remote {repoSite}/{config.Repo}.git HEAD");
+            }
+            catch (Exception ex)
+            {
+                log.Error(ex.Message);
+                return;
+            }
             masterHash = masterHash.Split("  ")[0];
-            //var jsonString = GetRepoJson(repoName, lastHash).Result;
-            //var json = JObject.Parse(jsonString);
-            //var date = json["commit"]["commiter"]["date"].Value<string>();
-            //DateTime myDate = DateTime.ParseExact(date, "yyyy-MM-ddTHH:mm:ssZ", System.Globalization.CultureInfo.InvariantCulture);
             if (!string.IsNullOrWhiteSpace(config.LastHash) && config.LastHash.Equals(masterHash))
                 return;
 
             // Get repo as zip
-            var contents = GetRequestByteArray($"https://github.com/{config.Repo}/archive/master.zip").Result;
-            File.WriteAllBytes(repoPath, contents);
+            var contents = GetRequestByteArray($"{repoSite}/{config.Repo}/archive/master.zip").Result;
+            File.WriteAllBytes(config.RepoPath, contents);
 
             // Get rpm packages and zip them together
             foreach (var rpm in config.Rpms)
             {
-                Bash($"Yumdownloader {rpm} --destdir {rpmsFolder} --resolve");
+                try
+                {
+                    Bash($"Yumdownloader {rpm} --destdir {config.RpmsFolder} --resolve");
+                }
+                catch(Exception ex)
+                {
+                    log.Error(ex.Message);
+                    return;
+                }
             }
-            ZipFile.CreateFromDirectory(rpmsFolder, rpmsZipPath);
+            ZipFile.CreateFromDirectory(config.RpmsFolder, config.RpmsZipPath);
             
             // Zip all binaries to one zip (includes repo.zip + rpms.zip)
-            ZipFile.CreateFromDirectory(binariesPath, binariesZipPath);
+            ZipFile.CreateFromDirectory(config.BinariesPath, config.BinariesZipPath);
             
             // Update configuration
             config.LastHash = masterHash;
@@ -60,13 +73,6 @@ namespace Fetcher
             configFile.Update("Configuration", newConfig);
             Toml.WriteFile(configFile, configPath);
         }
-
-        //private static async Task<string> GetRepoJson(string repoName, string lastCommit)
-        //{
-        //    HttpClient client = new HttpClient();
-        //    var responseString = await client.GetStringAsync($"https://api.github.com/repos/{repoName}/commits/{lastCommit}");
-        //    return responseString;
-        //}
 
         private static async Task<byte[]> GetRequestByteArray(string url)
         {
@@ -94,6 +100,7 @@ namespace Fetcher
                 process.Start();
                 result = process.StandardOutput.ReadToEnd();
             }
+
             return result;
         }
     }
