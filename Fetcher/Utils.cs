@@ -79,7 +79,16 @@ namespace Fetcher
 
         public static bool CheckRpms(List<string> rpms, string rpmsFolder)
         {
-            var result = Bash($"ls -l {rpmsFolder}");
+            string result;
+            try
+            {
+                result = Bash($"ls -l {rpmsFolder}");
+            }
+            catch (Exception ex)
+            {
+                log.Error(ex.Message);
+                return false;
+            }
             foreach (var rpm in rpms)
             {
                 if (!result.Contains(rpm))
@@ -137,7 +146,7 @@ namespace Fetcher
             catch (Exception ex)
             {
                 log.Error(ex.Message);
-                hash = "";
+                hash = string.Empty;
                 return false;
             }
         }

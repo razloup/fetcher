@@ -7,10 +7,8 @@ namespace Fetcher
     public class Program
     {
         private static readonly ILog log = LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
-        private const string getRepoCmdStart = "https://github.com";
-        private const string getRepoCmdEnd = "archive/master.zip";
-        private const string getCommitHashCmdStart = "https://api.github.com/repos";
-        private const string getCommitHashCmdEnd = "commits/master";
+        private const string CommitHashCmd = "https://api.github.com/repos@commits/master";
+        private const string repoCmd = "https://github.com@archive/master.zip";
 
         public static void Main()
         {
@@ -20,11 +18,12 @@ namespace Fetcher
             var config = Utils.ReadConfig(configPath);
 
             // Get last updated commit hash
-            var getCommitUrl = $"{getCommitHashCmdStart}/{config.Repo}/{getCommitHashCmdEnd}";
+            var splittedCommitCmd = CommitHashCmd.Split('@');
+            var getCommitUrl = $"{splittedCommitCmd[0]}/{config.Repo}/{splittedCommitCmd[1]}";
             if (!Utils.TryGetCommitHash(getCommitUrl, out string commitHash))
                 return;
 
-            // Change check
+            // Check if the last commit in the repo has changed since last time
             if (!string.IsNullOrWhiteSpace(config.LastHash) && config.LastHash.Equals(commitHash))
             {
                 log.Debug("Repo has not changed since last checked");
@@ -32,17 +31,22 @@ namespace Fetcher
             }
 
             // Get repo as zip
-            var getRepoUrl = $"{getRepoCmdStart}/{config.Repo}/{getRepoCmdEnd}";
+            var splittedRepoCmd = repoCmd.Split('@');
+            var getRepoUrl = $"{splittedRepoCmd[0]}/{config.Repo}/{splittedRepoCmd[1]}";
             if (!Utils.TryGetRepoZip(getRepoUrl, config.RepoPath))
                 return;
 
-            // Get rpm packages to folder
-            if (!Utils.TryGetRpms(config.Rpms, config.RpmsFolder))
-                return;
+            if (config.Rpms.Count > 0)
+            {
+                // Get rpm packages to folder
+                if (!Utils.TryGetRpms(config.Rpms, config.RpmsFolder))
+                    return;
 
-            // Check all rpms necessary are downloaded
-            if (!Utils.CheckRpms(config.Rpms, config.RpmsFolder))
-                return;
+                // Check all rpms necessary are downloaded
+                if (!Utils.CheckRpms(config.Rpms, config.RpmsFolder))
+                    return;
+            }
+            
 
             // Zip all rpms 
             ZipFile.CreateFromDirectory(config.RpmsFolder, config.RpmsZipPath);
