@@ -6,15 +6,17 @@ namespace Fetcher
 {
     public class Program
     {
-        private static readonly ILog log = LogManager.GetLogger(typeof(Program));
+        private static readonly ILog log = LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
         private const string getRepoCmdStart = "https://github.com";
         private const string getRepoCmdEnd = "archive/master.zip";
         private const string getCommitHashCmdStart = "https://api.github.com/repos";
         private const string getCommitHashCmdEnd = "commits/master";
-        
-        // TODO: Run as serivce every night
+
+        // TODO: Run as service every night
         public static void Main()
         {
+            Utils.SetupLogger();
+
             var configPath = ConfigurationManager.AppSettings["configPath"];
             var config = Utils.ReadConfig(configPath);
 
@@ -34,14 +36,14 @@ namespace Fetcher
             var getRepoUrl = $"{getRepoCmdStart}/{config.Repo}/{getRepoCmdEnd}";
             if (!Utils.TryGetRepoZip(getRepoUrl, config.RepoPath))
                 return;
-                
+
             // Get rpm packages to folder
             if (!Utils.TryGetRpms(config.Rpms, config.RpmsFolder))
                 return;
 
             // Check all rpms necessary are downloaded
             if (!Utils.CheckRpms(config.Rpms, config.RpmsFolder))
-                return; 
+                return;
 
             // Zip all rpms 
             ZipFile.CreateFromDirectory(config.RpmsFolder, config.RpmsZipPath);

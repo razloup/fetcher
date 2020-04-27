@@ -1,4 +1,5 @@
 ﻿using log4net;
+using log4net.Repository;
 using Nett;
 using Newtonsoft.Json.Linq;
 using System;
@@ -7,13 +8,14 @@ using System.Diagnostics;
 using System.IO;
 using System.Net;
 using System.Net.Http;
+using System.Reflection;
 using System.Threading.Tasks;
 
 namespace Fetcher
 {
     public class Utils
     {
-        private static readonly ILog log = LogManager.GetLogger(typeof(Program));
+        private static readonly ILog log = LogManager.GetLogger(MethodBase.GetCurrentMethod().DeclaringType);
 
         public static async Task<byte[]> GetRequestByteArray(string url)
         {
@@ -111,7 +113,7 @@ namespace Fetcher
             {
                 var contents = GetRequestByteArray(url).Result;
                 File.WriteAllBytes(repoPath, contents);
-                log.Info($"Downloaded repo as zip in {repoPath}");
+                log.Debug($"Downloaded repo as zip in {repoPath}");
                 return true;
             }
             catch (Exception ex)
@@ -138,6 +140,15 @@ namespace Fetcher
                 hash = "";
                 return false;
             }
+        }
+
+        public static void SetupLogger()
+        {
+            ILoggerRepository repository = LogManager.GetRepository(Assembly.GetCallingAssembly());
+
+            var fileInfo = new FileInfo(@"log4net.config");
+
+            log4net.Config.XmlConfigurator.Configure(repository, fileInfo);
         }
     }
 }
