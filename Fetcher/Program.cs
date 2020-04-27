@@ -12,7 +12,6 @@ namespace Fetcher
         private const string getCommitHashCmdStart = "https://api.github.com/repos";
         private const string getCommitHashCmdEnd = "commits/master";
 
-        // TODO: Run as service every night
         public static void Main()
         {
             Utils.SetupLogger();
