@@ -13,7 +13,6 @@ namespace Fetcher
         public string BinariesPath { get; set; }
         public string BinariesZipPath { get; set; }
 
-
         public Configuration()
         {
 

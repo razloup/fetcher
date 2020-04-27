@@ -1,118 +1,59 @@
-﻿using System.Diagnostics;
-using System.IO.Compression;
-using System.Net.Http;
-using System.Threading.Tasks;
+﻿using System.IO.Compression;
 using System.Configuration;
-using Nett;
-using System.IO;
 using log4net;
-using System;
 
 namespace Fetcher
 {
     public class Program
     {
         private static readonly ILog log = LogManager.GetLogger(typeof(Program));
-
+        private const string getRepoCmdStart = "https://github.com";
+        private const string getRepoCmdEnd = "archive/master.zip";
+        private const string getCommitHashCmdStart = "https://api.github.com/repos";
+        private const string getCommitHashCmdEnd = "commits/master";
+        
+        // TODO: Run as serivce every night
         public static void Main()
         {
-            const string repoSite = "https://github.com";
             var configPath = ConfigurationManager.AppSettings["configPath"];
-            var config = ReadConfig(configPath);
-            string masterHash;
+            var config = Utils.ReadConfig(configPath);
 
             // Get last updated commit hash
-            try
-            {
-                masterHash = Bash($"git ls-remote {repoSite}/{config.Repo}.git HEAD");
-            }
-            catch (Exception ex)
-            {
-                log.Error(ex.Message);
+            var getCommitUrl = $"{getCommitHashCmdStart}/{config.Repo}/{getCommitHashCmdEnd}";
+            if (!Utils.TryGetCommitHash(getCommitUrl, out string commitHash))
                 return;
-            }
-            masterHash = masterHash.Split("  ")[0];
-            if (!string.IsNullOrWhiteSpace(config.LastHash) && config.LastHash.Equals(masterHash))
+
+            // Change check
+            if (!string.IsNullOrWhiteSpace(config.LastHash) && config.LastHash.Equals(commitHash))
             {
-                log.Info("Repo did not have an update");
+                log.Debug("Repo has not changed since last checked");
                 return;
             }
 
             // Get repo as zip
-            var contents = GetRequestByteArray($"{repoSite}/{config.Repo}/archive/master.zip").Result;
-            File.WriteAllBytes(config.RepoPath, contents);
-            log.Info("Downloaded repo as zip");
-
+            var getRepoUrl = $"{getRepoCmdStart}/{config.Repo}/{getRepoCmdEnd}";
+            if (!Utils.TryGetRepoZip(getRepoUrl, config.RepoPath))
+                return;
+                
             // Get rpm packages to folder
-            foreach (var rpm in config.Rpms)
-            {
-                try
-                {
-                    Bash($"Yumdownloader {rpm} --destdir {config.RpmsFolder} --resolve");
-                }
-                catch(Exception ex)
-                {
-                    log.Info($"Error in {rpm} rpm package download ");
-                    log.Error(ex.Message);
-                    return;
-                }
-            }
+            if (!Utils.TryGetRpms(config.Rpms, config.RpmsFolder))
+                return;
+
+            // Check all rpms necessary are downloaded
+            if (!Utils.CheckRpms(config.Rpms, config.RpmsFolder))
+                return; 
+
             // Zip all rpms 
             ZipFile.CreateFromDirectory(config.RpmsFolder, config.RpmsZipPath);
-            log.Info("Zipped rpms");
+            log.Debug("Zipped rpms");
 
             // Zip all binaries (includes repo.zip + rpms.zip)
             ZipFile.CreateFromDirectory(config.BinariesPath, config.BinariesZipPath);
-            log.Info("Zipped binaries");
+            log.Debug("Zipped binaries");
 
             // Update configuration
-            config.LastHash = masterHash;
-            UpdateConfig(configPath, config);
-            log.Info("Commit hash updated in configuration");
-        }
-
-        private static Configuration ReadConfig(string configPath)
-        {
-            var configFile = Toml.ReadFile(configPath);
-            var config = configFile.Get("Configuration");
-            return config.Get<Configuration>();
-        }
-
-        private static void UpdateConfig(string configPath, Configuration newConfig)
-        {
-            var configFile = Toml.ReadFile(configPath);
-            configFile.Update("Configuration", newConfig);
-            Toml.WriteFile(configFile, configPath);
-        }
-
-        private static async Task<byte[]> GetRequestByteArray(string url)
-        {
-            using var client = new HttpClient();
-            return await client.GetByteArrayAsync(url);
-        }
-
-        private static string Bash(string cmd)
-        {
-            string result = "";
-            var escapedArgs = cmd.Replace("\"", "\\\"");
-            var process = new Process()
-            {
-                StartInfo = new ProcessStartInfo
-                {
-                    FileName = "/bin/bash",
-                    Arguments = $"-c \"{escapedArgs}\"",
-                    RedirectStandardOutput = true,
-                    UseShellExecute = false,
-                    CreateNoWindow = true,
-                }
-            };
-            using (process)
-            {
-                process.Start();
-                result = process.StandardOutput.ReadToEnd();
-            }
-
-            return result;
+            config.LastHash = commitHash;
+            Utils.UpdateConfig(configPath, config);
         }
     }
 }
