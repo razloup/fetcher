@@ -33,7 +33,10 @@ namespace Fetcher
             }
             masterHash = masterHash.Split("  ")[0];
             if (!string.IsNullOrWhiteSpace(config.LastHash) && config.LastHash.Equals(masterHash))
+            {
+                log.Info("Repo did not have an update");
                 return;
+            }
 
             // Get repo as zip
             var contents = GetRequestByteArray($"{repoSite}/{config.Repo}/archive/master.zip").Result;
@@ -49,6 +52,7 @@ namespace Fetcher
                 }
                 catch(Exception ex)
                 {
+                    log.Info($"Error in {rpm} rpm package download ");
                     log.Error(ex.Message);
                     return;
                 }
@@ -67,14 +71,14 @@ namespace Fetcher
             log.Info("Commit hash updated in configuration");
         }
 
-        private static Configuraion ReadConfig(string configPath)
+        private static Configuration ReadConfig(string configPath)
         {
             var configFile = Toml.ReadFile(configPath);
             var config = configFile.Get("Configuration");
-            return config.Get<Configuraion>();
+            return config.Get<Configuration>();
         }
 
-        private static void UpdateConfig(string configPath, Configuraion newConfig)
+        private static void UpdateConfig(string configPath, Configuration newConfig)
         {
             var configFile = Toml.ReadFile(configPath);
             configFile.Update("Configuration", newConfig);

@@ -2,7 +2,7 @@
 
 namespace Fetcher
 {
-    public class Configuraion
+    public class Configuration
     {
         public string LastHash { get; set; }
         public string Repo { get; set; }
@@ -14,12 +14,12 @@ namespace Fetcher
         public string BinariesZipPath { get; set; }
 
 
-        public Configuraion()
+        public Configuration()
         {
 
         }
 
-        public Configuraion(string lastHash, string repo, List<string> rpms)
+        public Configuration(string lastHash, string repo, List<string> rpms)
         {
             LastHash = lastHash;
             Repo = repo;
