@@ -1,5 +1,4 @@
-﻿using System.IO.Compression;
-using System.Configuration;
+﻿using System.Configuration;
 using log4net;
 
 namespace Fetcher
@@ -46,15 +45,15 @@ namespace Fetcher
                 if (!Utils.CheckRpms(config.Rpms, config.RpmsFolder))
                     return;
             }
-            
 
-            // Zip all rpms 
-            ZipFile.CreateFromDirectory(config.RpmsFolder, config.RpmsZipPath);
-            log.Debug("Zipped rpms");
+            // Zip rpms 
+            if (!Utils.TryZip(config.RpmsFolder, config.RpmsZipPath))
+                return;
 
-            // Zip all binaries (includes repo.zip + rpms.zip)
-            ZipFile.CreateFromDirectory(config.BinariesPath, config.BinariesZipPath);
-            log.Debug("Zipped binaries");
+
+            // Zip binaries (includes repo.zip + rpms.zip)
+            if (!Utils.TryZip(config.BinariesPath, config.BinariesZipPath))
+                return;
 
             // Update configuration
             config.LastHash = commitHash;

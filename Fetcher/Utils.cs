@@ -6,6 +6,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.IO.Compression;
 using System.Net;
 using System.Net.Http;
 using System.Reflection;
@@ -147,6 +148,23 @@ namespace Fetcher
             {
                 log.Error(ex.Message);
                 hash = string.Empty;
+                return false;
+            }
+        }
+
+        public static bool TryZip(string folderPath, string zipPath)
+        {
+            try
+            {
+                File.Delete(zipPath);
+                ZipFile.CreateFromDirectory(folderPath, zipPath);
+                log.Debug("Zipped successfully");
+                return true;
+            }
+            catch (Exception ex)
+            {
+                log.Error($"Error in zipping {folderPath}");
+                log.Error(ex.Message);
                 return false;
             }
         }
