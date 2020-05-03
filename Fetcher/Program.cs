@@ -52,7 +52,7 @@ namespace Fetcher
 
 
             // Zip binaries (includes repo.zip + rpms.zip)
-            if (!Utils.TryZip(config.BinariesPath, config.BinariesZipPath))
+            if (!Utils.TryZip(config.BinariesPath, $"{config.BinariesZipPath}\\{commitHash}.zip"))
                 return;
 
             // Update configuration
