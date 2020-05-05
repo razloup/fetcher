@@ -1,6 +1,7 @@
 ﻿using log4net;
 using log4net.Repository;
 using Nett;
+using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
@@ -10,6 +11,7 @@ using System.IO.Compression;
 using System.Net;
 using System.Net.Http;
 using System.Reflection;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 
 namespace Fetcher
@@ -148,6 +150,47 @@ namespace Fetcher
             {
                 log.Error(ex.Message);
                 hash = string.Empty;
+                return false;
+            }
+        }
+
+        public static bool TryCreateMetadata(string path, string hash, string version, string rpmsPath)
+        {
+            try
+            {
+                string name; 
+                string rpmVersion;
+                var date = DateTime.Now.ToString("dd/MM/yyyy");
+                var versionFloat = float.Parse(version);
+                var newVersion = versionFloat++.ToString("0.0");
+                
+                // Get rpms info
+                var rpms = new Dictionary<string, string>();
+                string[] fileArray = Directory.GetFiles(rpmsPath, "*.rpm");
+                foreach (var rpm in fileArray)
+                {
+                    name = Bash($"rpm -qp --queryformat '%{{NAME}}' {rpm}");
+                    name = Regex.Replace(name, @"\t|\n|\r", "");
+                    rpmVersion = Bash($"rpm -qp --queryformat '%{{VERSION}}' {rpm}");
+                    rpmVersion = Regex.Replace(rpmVersion, @"\t|\n|\r", "");
+                    rpms.Add(name, rpmVersion);
+                }
+
+                // Create and write to file
+                var metadata = new Metadata(date, hash, newVersion, rpms);
+                
+                using (StreamWriter file = File.CreateText(path))
+                {
+                    JsonSerializer serializer = new JsonSerializer();
+                    // Serialize object directly into file stream
+                    serializer.Serialize(file, metadata);
+                }
+                log.Debug("Metadata file created successfully");
+                return true;
+            }
+            catch(Exception ex)
+            {
+                log.Error(ex.Message);
                 return false;
             }
         }

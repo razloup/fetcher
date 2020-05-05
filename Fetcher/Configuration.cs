@@ -5,11 +5,13 @@ namespace Fetcher
     public class Configuration
     {
         public string LastHash { get; set; }
+        public string Version { get; set; }
         public string Repo { get; set; }
         public List<string> Rpms { get; set; }
         public string RpmsFolder { get; set; }
         public string RepoPath { get; set; }
         public string RpmsZipPath { get; set; }
+        public string MetadataPath { get; set; }
         public string BinariesPath { get; set; }
         public string BinariesZipPath { get; set; }
 

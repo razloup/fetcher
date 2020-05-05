@@ -46,12 +46,16 @@ namespace Fetcher
                     return;
             }
 
+            // Create metadata file
+            if (!Utils.TryCreateMetadata(config.MetadataPath, commitHash, config.Version, config.RpmsFolder))
+                return;
+
             // Zip rpms 
             if (!Utils.TryZip(config.RpmsFolder, config.RpmsZipPath))
                 return;
 
 
-            // Zip binaries (includes repo.zip + rpms.zip)
+            // Zip binaries (includes repo.zip + rpms.zip + metadata.json)
             if (!Utils.TryZip(config.BinariesPath, $"{config.BinariesZipPath}\\{commitHash}.zip"))
                 return;
 
