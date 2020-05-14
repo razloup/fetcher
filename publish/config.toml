@@ -1,0 +1,12 @@
+
+[Configuration]
+LastHash = "953fc030319459912bc676f85745c4ee3e0742de"
+Version = "1.0"
+Repo = "FreeRDP/FreeRDP"
+Rpms = []
+RpmsFolder = "C:\\Code\\fetcher\\rpms"
+RepoPath = "C:\\Code\\fetcher\\progress\\repo.zip"
+RpmsZipPath = "C:\\Code\\fetcher\\progress\\rpms.zip"
+MetadataPath = "C:\\Code\\fetcher\\progress\\metadata.json"
+BinariesPath = "C:\\Code\\fetcher\\progress"
+BinariesZipPath = "C:\\Code\\fetcher\\ready"
